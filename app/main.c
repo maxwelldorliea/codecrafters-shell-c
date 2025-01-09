@@ -16,6 +16,8 @@ int main() {
       int code = atoi(token->args[0]);
       freeToken(token);
       exit(code);
+  } else if (token && strcmp(token->cmd, "echo") == 0) {
+      echo(token);
   } else {
     printf("%s: command not found\n", input);
   }
@@ -39,7 +41,7 @@ token_t *tokenize(char *s) {
   int i = 0, t_count = 0;
   char curr_token[100];
   token_t *token = malloc(sizeof(*token));
-  for (int idx = 0; str[idx] != '\0'; idx++) {
+  for (int idx = 0; str[idx]; idx++) {
     if (str[idx] == '\n') continue;
     if (str[idx] == ' ') {
       curr_token[i] = '\0';
@@ -51,6 +53,7 @@ token_t *tokenize(char *s) {
         token->cmd = strdup(curr_token);
         t_count++;
       }
+      continue;
     }
     curr_token[i++] = str[idx];
   }
@@ -59,4 +62,12 @@ token_t *tokenize(char *s) {
   else token->cmd = strdup(curr_token);
   token->args[t_count] = NULL;
   return token;
+}
+
+void echo(token_t *token) {
+  for (int i = 0; token->args[i]; i++) {
+    printf("%s", token->args[i]);
+    if (token->args[i + 1]) printf(" ");
+  }
+  putchar('\n');
 }

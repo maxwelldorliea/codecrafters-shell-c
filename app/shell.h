@@ -11,5 +11,6 @@ typedef struct token_s {
 
 token_t *tokenize(char* s);
 void freeToken(token_t *token);
+void echo(token_t *token);
 
 #endif
