@@ -67,13 +67,17 @@ token_t *tokenize(char *s) {
 }
 
 void type(token_t *token) {
-  char*builtin[] = {"exit", "echo", NULL};
+  char *builtin[] = {"exit", "echo", NULL};
   for (int i = 0; token->args[i]; i++) {
+    int found = 0;
     for (int j = 0; builtin[j]; j++) {
-      if (strcmp(token->args[i], builtin[j]) == 0)
+      if (strcmp(token->args[i], builtin[j]) == 0) {
         printf("%s is a shell builtin\n", token->args[i]);
-      else printf("%s: not found\n", token->args[i]);
+        found = 1;
+        break;
+      }
     }
+    if (!found) printf("%s: not found\n", token->args[i]);
   }
 }
 
