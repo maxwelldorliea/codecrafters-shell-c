@@ -18,6 +18,8 @@ int main() {
       exit(code);
   } else if (token && strcmp(token->cmd, "echo") == 0) {
       echo(token);
+  } else if (token && strcmp(token->cmd, "type") == 0) {
+      type(token);
   } else {
     printf("%s: command not found\n", input);
   }
@@ -62,6 +64,17 @@ token_t *tokenize(char *s) {
   else token->cmd = strdup(curr_token);
   token->args[t_count] = NULL;
   return token;
+}
+
+void type(token_t *token) {
+  char*builtin[] = {"exit", NULL};
+  for (int i = 0; token->args[i]; i++) {
+    for (int j = 0; builtin[j]; j++) {
+      if (strcmp(token->args[i], builtin[j]) == 0)
+        printf("%s is a shell builtin\n", token->args[i]);
+      else printf("%s: not found\n", token->args[i]);
+    }
+  }
 }
 
 void echo(token_t *token) {
