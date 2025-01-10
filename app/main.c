@@ -67,7 +67,7 @@ token_t *tokenize(char *s) {
 }
 
 void type(token_t *token) {
-  char *builtin[] = {"exit", "echo", NULL};
+  char *builtin[] = {"exit", "echo", "type", NULL};
   for (int i = 0; token->args[i]; i++) {
     int found = 0;
     for (int j = 0; builtin[j]; j++) {
