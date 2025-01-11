@@ -76,11 +76,8 @@ void type(token_t *token) {
         found = 1;
         break;
       }
-      if (j == 0 && non_builtin_cmd(token->args[i])) {
-        found = 1;
-        break;
-      }
     }
+    if (!found && non_builtin_cmd(token->args[i])) found = 1;
     if (!found) printf("%s: not found\n", token->args[i]);
   }
 }
@@ -104,7 +101,6 @@ int non_builtin_cmd(char *s){
     strcat(filepath, "/");
     strcat(filepath, s);
     filepath[fpath_len + s_len + 2] = '\0';
-    char *st = filepath;
     FILE *file = fopen(filepath, "r");
 
     if (file) {
@@ -113,6 +109,16 @@ int non_builtin_cmd(char *s){
       return 1;
     }
     fpath = strtok(NULL, ":");
+  }
+  char filepath[s_len + 6];
+  strcpy(filepath, "/bin/");
+  strcat(filepath, s);
+  filepath[s_len + 6] = '\0';
+  FILE *file = fopen(filepath, "r");
+  if (file) {
+    fclose(file);
+    printf("%s is %s\n", s, filepath);
+    return 1;
   }
   return 0;
 }
