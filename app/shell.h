@@ -13,5 +13,6 @@ token_t *tokenize(char* s);
 void freeToken(token_t *token);
 void echo(token_t *token);
 void type(token_t *token);
+int non_builtin_cmd(char *s);
 
 #endif

@@ -2,7 +2,7 @@
 #include <string.h>
 #include "shell.h"
 
-int main() {
+int main(int argl, char **args, char **env) {
   // Flush after every printf
   setbuf(stdout, NULL);
 
@@ -76,6 +76,10 @@ void type(token_t *token) {
         found = 1;
         break;
       }
+      if (j == 0 && non_builtin_cmd(token->args[i])) {
+        found = 1;
+        break;
+      }
     }
     if (!found) printf("%s: not found\n", token->args[i]);
   }
@@ -87,4 +91,28 @@ void echo(token_t *token) {
     if (token->args[i + 1]) printf(" ");
   }
   putchar('\n');
+}
+
+int non_builtin_cmd(char *s){
+  char *path = getenv("PATH");
+  char *fpath = strtok(path, ":");
+  size_t s_len = strlen(s);
+  while(fpath) {
+    size_t fpath_len = strlen(fpath);
+    char filepath[s_len + fpath_len + 2];
+    strcpy(filepath, fpath);
+    strcat(filepath, "/");
+    strcat(filepath, s);
+    filepath[fpath_len + s_len + 2] = '\0';
+    char *st = filepath;
+    FILE *file = fopen(filepath, "r");
+
+    if (file) {
+      fclose(file);
+      printf("%s is %s\n", s, filepath);
+      return 1;
+    }
+    fpath = strtok(NULL, ":");
+  }
+  return 0;
 }
