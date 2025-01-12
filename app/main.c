@@ -1,10 +1,17 @@
+#include "shell.h"
 #include <stdio.h>
 #include <string.h>
-#include "shell.h"
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
 
-int main(int argl, char **args, char **env) {
+
+int main(int argc, char **args, char **env) {
   // Flush after every printf
   setbuf(stdout, NULL);
+  pid_t pid;
+  int wstatus;
 
   do {
   printf("$ ");
@@ -13,16 +20,22 @@ int main(int argl, char **args, char **env) {
   input[strlen(input) - 1] = '\0';
   token_t *token = tokenize(input);
   if (token && strcmp(token->cmd, "exit") == 0) {
-      int code = atoi(token->args[0]);
+      int code = atoi(token->args[1]);
       freeToken(token);
       exit(code);
   } else if (token && strcmp(token->cmd, "echo") == 0) {
       echo(token);
   } else if (token && strcmp(token->cmd, "type") == 0) {
       type(token);
-  } else {
+  } else if (token->isExe == 0 && token->cmd[0] != '/' && token->cmd[0] != '.') {
     printf("%s: command not found\n", input);
+  } else {
+      if ((pid = fork()) == 0) {
+      execve(token->cmd, token->args, env);
+      exit(0);
+      }
   }
+  wait(NULL);
   freeToken(token);
   }while (1);
 
@@ -49,10 +62,19 @@ token_t *tokenize(char *s) {
       curr_token[i] = '\0';
       i = 0;
       if (t_count) {
-        token->args[t_count - 1] = strdup(curr_token);
+        token->args[t_count] = strdup(curr_token);
         t_count++;
       } else {
-        token->cmd = strdup(curr_token);
+        char *filepath = find_cmd_path(curr_token);
+        if (filepath) {
+          token->cmd = strdup(filepath);
+          free(filepath);
+          token->isExe = 1;
+        } else {
+          token->cmd = strdup(curr_token);
+          token->isExe = 0;
+        }
+        token->args[t_count] = strdup(curr_token);
         t_count++;
       }
       continue;
@@ -60,15 +82,28 @@ token_t *tokenize(char *s) {
     curr_token[i++] = str[idx];
   }
   curr_token[i] = '\0';
-  if (t_count) token->args[t_count - 1] = strdup(curr_token);
-  else token->cmd = strdup(curr_token);
+  if (t_count) {
+    token->args[t_count++] = strdup(curr_token);
+  } else {
+    char *filepath = find_cmd_path(curr_token);
+    if (filepath) {
+      token->cmd = strdup(filepath);
+      free(filepath);
+      token->isExe = 1;
+    } else {
+      token->cmd = strdup(curr_token);
+      token->isExe = 0;
+    }
+    token->args[t_count++] = strdup(curr_token);
+  }
   token->args[t_count] = NULL;
   return token;
 }
 
 void type(token_t *token) {
   char *builtin[] = {"exit", "echo", "type", NULL};
-  for (int i = 0; token->args[i]; i++) {
+  // start index at one because the first arg(arg[0]) is the cmd itself
+  for (int i = 1; token->args[i]; i++) {
     int found = 0;
     for (int j = 0; builtin[j]; j++) {
       if (strcmp(token->args[i], builtin[j]) == 0) {
@@ -76,24 +111,47 @@ void type(token_t *token) {
         found = 1;
         break;
       }
+      if (j == 0) {
+        char *filepath = find_cmd_path(token->args[i]);
+        if (filepath != NULL) {
+          char* fpath = filepath;
+          printf("%s is %s\n", token->args[i], fpath);
+          free(filepath);
+          found = 1;
+          break;
+        }
+      };
     }
-    if (!found && non_builtin_cmd(token->args[i])) found = 1;
     if (!found) printf("%s: not found\n", token->args[i]);
   }
 }
 
 void echo(token_t *token) {
-  for (int i = 0; token->args[i]; i++) {
+  // start index at one because the first arg(arg[0]) is the cmd itself
+  for (int i = 1; token->args[i]; i++) {
     printf("%s", token->args[i]);
     if (token->args[i + 1]) printf(" ");
   }
   putchar('\n');
 }
 
-int non_builtin_cmd(char *s){
-  char *path = getenv("PATH");
-  char *fpath = strtok(path, ":");
-  size_t s_len = strlen(s);
+char* find_cmd_path(char *s) {
+  // cmds to ignore finding path for
+  char *special_cmd[] = {"echo", NULL};
+  int i = 0;
+  char *path;
+  char *fpath;
+  size_t s_len;
+
+  if (s[0] == '/' || s[0] == '.') return NULL;
+
+  while (special_cmd[i]) {
+    if (strcmp(special_cmd[i++], s) == 0) return NULL;
+  }
+
+  path = getenv("PATH");
+  fpath = strtok(path, ":");
+  s_len = strlen(s);
   while(fpath) {
     size_t fpath_len = strlen(fpath);
     char filepath[s_len + fpath_len + 2];
@@ -105,8 +163,7 @@ int non_builtin_cmd(char *s){
 
     if (file) {
       fclose(file);
-      printf("%s is %s\n", s, filepath);
-      return 1;
+      return strdup(filepath);
     }
     fpath = strtok(NULL, ":");
   }
@@ -117,8 +174,7 @@ int non_builtin_cmd(char *s){
   FILE *file = fopen(filepath, "r");
   if (file) {
     fclose(file);
-    printf("%s is %s\n", s, filepath);
-    return 1;
+    return strdup(filepath);
   }
-  return 0;
+  return NULL;
 }
