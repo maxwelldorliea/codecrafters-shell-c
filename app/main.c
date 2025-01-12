@@ -27,6 +27,8 @@ int main(int argc, char **args, char **env) {
       echo(token);
   } else if (token && strcmp(token->cmd, "type") == 0) {
       type(token);
+  } else if (token && strcmp(token->cmd, "pwd") == 0) {
+      pwd();
   } else if (token->isExe == 0 && token->cmd[0] != '/' && token->cmd[0] != '.') {
     printf("%s: command not found\n", input);
   } else {
@@ -101,7 +103,7 @@ token_t *tokenize(char *s) {
 }
 
 void type(token_t *token) {
-  char *builtin[] = {"exit", "echo", "type", NULL};
+  char *builtin[] = {"exit", "echo", "type", "pwd", NULL};
   // start index at one because the first arg(arg[0]) is the cmd itself
   for (int i = 1; token->args[i]; i++) {
     int found = 0;
@@ -135,9 +137,13 @@ void echo(token_t *token) {
   putchar('\n');
 }
 
+void pwd(void) {
+  puts(getenv("PWD"));
+}
+
 char* find_cmd_path(char *s) {
   // cmds to ignore finding path for
-  char *special_cmd[] = {"echo", NULL};
+  char *special_cmd[] = {"echo", "pwd", NULL};
   int i = 0;
   char *path;
   char *fpath;
