@@ -1,5 +1,6 @@
 #include "shell.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -29,6 +30,8 @@ int main(int argc, char **args, char **env) {
       type(token);
   } else if (token && strcmp(token->cmd, "pwd") == 0) {
       pwd();
+  } else if (token && strcmp(token->cmd, "cd") == 0) {
+      cd(token);
   } else if (token->isExe == 0 && token->cmd[0] != '/' && token->cmd[0] != '.') {
     printf("%s: command not found\n", input);
   } else {
@@ -103,7 +106,7 @@ token_t *tokenize(char *s) {
 }
 
 void type(token_t *token) {
-  char *builtin[] = {"exit", "echo", "type", "pwd", NULL};
+  char *builtin[] = {"exit", "echo", "type", "pwd", "cd", NULL};
   // start index at one because the first arg(arg[0]) is the cmd itself
   for (int i = 1; token->args[i]; i++) {
     int found = 0;
@@ -141,9 +144,17 @@ void pwd(void) {
   puts(getenv("PWD"));
 }
 
+void cd(token_t *token) {
+  if (token->args[1] != NULL && access(token->args[1], R_OK) == 0) {
+    setenv("PWD", token->args[1], 1);
+  } else {
+    printf("%s: %s: No such file or directory\n", token->cmd, token->args[1]);
+  }
+}
+
 char* find_cmd_path(char *s) {
   // cmds to ignore finding path for
-  char *special_cmd[] = {"echo", "pwd", NULL};
+  char *special_cmd[] = {"echo", "pwd", "cd", NULL};
   int i = 0;
   char *path;
   char *fpath;
@@ -165,10 +176,7 @@ char* find_cmd_path(char *s) {
     strcat(filepath, "/");
     strcat(filepath, s);
     filepath[fpath_len + s_len + 2] = '\0';
-    FILE *file = fopen(filepath, "r");
-
-    if (file) {
-      fclose(file);
+    if (access(filepath, R_OK) == 0) {
       return strdup(filepath);
     }
     fpath = strtok(NULL, ":");
@@ -177,9 +185,7 @@ char* find_cmd_path(char *s) {
   strcpy(filepath, "/bin/");
   strcat(filepath, s);
   filepath[s_len + 6] = '\0';
-  FILE *file = fopen(filepath, "r");
-  if (file) {
-    fclose(file);
+  if (access(filepath, R_OK) == 0) {
     return strdup(filepath);
   }
   return NULL;

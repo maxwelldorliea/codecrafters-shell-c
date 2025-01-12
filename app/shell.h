@@ -18,6 +18,8 @@ token_t *tokenize(char* s);
 void freeToken(token_t *token);
 void echo(token_t *token);
 void type(token_t *token);
+void pwd(void);
+void cd(token_t *token);
 char* find_cmd_path(char *s);
 
 #endif
