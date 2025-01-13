@@ -6,6 +6,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <ctype.h>
 
 
 int main(int argc, char **args, char **env) {
@@ -145,11 +146,80 @@ void pwd(void) {
 }
 
 void cd(token_t *token) {
-  if (token->args[1] != NULL && access(token->args[1], R_OK) == 0) {
-    setenv("PWD", token->args[1], 1);
-  } else {
+  char *pwd_path;
+  size_t pwd_len;
+  size_t arg_len;
+  if (token->args[1] == NULL) {
     printf("%s: %s: No such file or directory\n", token->cmd, token->args[1]);
+    return;
   }
+
+  switch (token->args[1][0]) {
+    case '/':
+      if (access(token->args[1], R_OK) == 0) {
+        setenv("PWD", token->args[1], 1);
+      } else {
+        printf("%s: %s: No such file or directory\n", token->cmd, token->args[1]);
+      }
+      break;
+    case '.':
+      pwd_path = getenv("PWD");
+      pwd_len = strlen(pwd_path);
+      arg_len = strlen(token->args[1]);
+      if (token->args[1][1] == '/') {
+        char path[pwd_len + arg_len];
+        char *arg = token->args[1];
+        arg++;
+        strcpy(path, pwd_path);
+        strcat(path, arg);
+        path[pwd_len + arg_len] = '\0';
+        if (access(path, R_OK) == 0) {
+          setenv("PWD", path, 1);
+        } else {
+          printf("%s: %s: No such file or directory\n", token->cmd, token->args[1]);
+        }
+        break;
+      } else if (token->args[1][1] == '.' && token->args[1][2] == '/') {
+        char *arg = token->args[1];
+        char pwdc[pwd_len + 1];
+        strcpy(pwdc, pwd_path);
+        pwdc[pwd_len + 1] = '\0';
+        int i = 0;
+        while (arg[i] == '.' && arg[i + 1] == '.' && arg[i + 2] == '/') {
+          while (pwdc[pwd_len] != '/') pwd_len--;
+          pwdc[pwd_len] = '\0';
+          if (isalnum(arg[i + 3])) {
+            arg++;
+            arg++;
+            arg_len -= 2;
+            break;
+          }
+          arg++;
+          arg++;
+          arg++;
+          arg_len -= 3;
+        }
+        if (arg) {
+          char path[pwd_len + arg_len];
+          strcpy(path, pwdc);
+          strcat(path, arg);
+          path[pwd_len + arg_len] = '\0';
+          if (access(path, R_OK) == 0) {
+            setenv("PWD", path, 1);
+          } else {
+            printf("%s: %s: No such file or directory\n", token->cmd, token->args[1]);
+          }
+        } else {
+          if (access(pwdc, R_OK) == 0) {
+            setenv("PWD", pwdc, 1);
+          } else {
+            printf("%s: %s: No such file or directory\n", token->cmd, token->args[1]);
+          }
+          break;
+        }
+      }
+  }
+
 }
 
 char* find_cmd_path(char *s) {
