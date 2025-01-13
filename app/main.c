@@ -149,6 +149,11 @@ void cd(token_t *token) {
   char *pwd_path;
   size_t pwd_len;
   size_t arg_len;
+  char *home_dir;
+  size_t home_dir_len;
+  char *arg;
+  char path[200];
+
   if (token->args[1] == NULL) {
     printf("%s: %s: No such file or directory\n", token->cmd, token->args[1]);
     return;
@@ -162,12 +167,30 @@ void cd(token_t *token) {
         printf("%s: %s: No such file or directory\n", token->cmd, token->args[1]);
       }
       break;
+    case '~':
+      arg = token->args[1];
+      arg_len = strlen(arg);
+      home_dir = getenv("HOME");
+      home_dir_len = strlen(home_dir);
+      arg++;
+      if (arg_len == 2) { // cd ~/ avoid adding the trailing / to the path
+        arg++;
+        arg_len -= 1;
+      }
+      strcpy(path, home_dir);
+      strcat(path, arg);
+      path[arg_len + home_dir_len] = '\0';
+      if (access(path, R_OK) == 0) {
+        setenv("PWD", path, 1);
+      } else {
+        printf("%s: %s: No such file or directory\n", token->cmd, token->args[1]);
+      }
+      break;
     case '.':
       pwd_path = getenv("PWD");
       pwd_len = strlen(pwd_path);
       arg_len = strlen(token->args[1]);
       if (token->args[1][1] == '/') {
-        char path[pwd_len + arg_len];
         char *arg = token->args[1];
         arg++;
         strcpy(path, pwd_path);
