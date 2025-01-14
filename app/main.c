@@ -61,12 +61,46 @@ token_t *tokenize(char *s) {
   strcpy(str, s);
   int i = 0, t_count = 0;
   char curr_token[100];
+  char quote = '\0';
   token_t *token = malloc(sizeof(*token));
   for (int idx = 0; str[idx]; idx++) {
+    if (i == 0 && (s[idx] == '"' || s[idx] == '\'')) {
+      if (s[idx] == '"') quote = '"';
+      else quote = '\'';
+      continue;
+    }
+    if (i == 0 && s[idx] == ' ' && !quote) continue;
     if (str[idx] == '\n') continue;
-    if (str[idx] == ' ') {
+    if (str[idx] == ' ' && !quote) {
       curr_token[i] = '\0';
       i = 0;
+      if (t_count) {
+        token->args[t_count++] = strdup(curr_token);
+      } else {
+        char *filepath = find_cmd_path(curr_token);
+        if (filepath) {
+          token->cmd = strdup(filepath);
+          free(filepath);
+          token->isExe = 1;
+        } else {
+          token->cmd = strdup(curr_token);
+          token->isExe = 0;
+        }
+        token->args[t_count] = strdup(curr_token);
+        t_count++;
+      }
+      continue;
+    }
+    if (str[idx] == quote && str[idx + 1] == quote) {
+      idx += 2;
+      while(str[idx] && str[idx] != quote) {
+        curr_token[i++] = str[idx++];
+      }
+    }
+    if (str[idx] == quote && str[idx + 1] != quote) {
+      curr_token[i] = '\0';
+      i = 0;
+      quote = '\0';
       if (t_count) {
         token->args[t_count] = strdup(curr_token);
         t_count++;
@@ -136,7 +170,7 @@ void echo(token_t *token) {
   // start index at one because the first arg(arg[0]) is the cmd itself
   for (int i = 1; token->args[i]; i++) {
     printf("%s", token->args[i]);
-    if (token->args[i + 1]) printf(" ");
+    if (token->args[i + 1] != NULL) printf(" ");
   }
   putchar('\n');
 }
