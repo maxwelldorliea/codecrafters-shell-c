@@ -22,7 +22,8 @@ int main(int argc, char **args, char **env) {
   input[strlen(input) - 1] = '\0';
   token_t *token = tokenize(input);
   if (token && strcmp(token->cmd, "exit") == 0) {
-      int code = atoi(token->args[1]);
+      int code = 0;
+      if (token->args[1]) code = atoi(token->args[1]);
       freeToken(token);
       exit(code);
   } else if (token && strcmp(token->cmd, "echo") == 0) {
@@ -97,13 +98,12 @@ token_t *tokenize(char *s) {
         curr_token[i++] = str[idx++];
       }
     }
-    if (str[idx] == quote && str[idx + 1] != quote) {
+    if (str[idx] == quote) {
       curr_token[i] = '\0';
       i = 0;
       quote = '\0';
-      if (t_count) {
-        token->args[t_count] = strdup(curr_token);
-        t_count++;
+      if (t_count && curr_token[0] != '\0') {
+        token->args[t_count++] = strdup(curr_token);
       } else {
         char *filepath = find_cmd_path(curr_token);
         if (filepath) {
@@ -114,12 +114,15 @@ token_t *tokenize(char *s) {
           token->cmd = strdup(curr_token);
           token->isExe = 0;
         }
-        token->args[t_count] = strdup(curr_token);
-        t_count++;
+        token->args[t_count++] = strdup(curr_token);
       }
       continue;
     }
     curr_token[i++] = str[idx];
+  }
+  if (i == 0) {
+    token->args[t_count] = NULL;
+    return token;
   }
   curr_token[i] = '\0';
   if (t_count) {
