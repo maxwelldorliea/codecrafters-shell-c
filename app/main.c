@@ -70,6 +70,11 @@ token_t *tokenize(char *s) {
       else quote = '\'';
       continue;
     }
+    if (!quote && str[idx] == '\\' && str[idx + 1]) {
+      idx++;
+      curr_token[i++] = str[idx];
+      continue;
+    }
     if (i == 0 && s[idx] == ' ' && !quote) continue;
     if (str[idx] == '\n') continue;
     if (str[idx] == ' ' && !quote) {
