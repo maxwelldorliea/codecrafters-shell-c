@@ -102,7 +102,7 @@ token_t *tokenize(char *s) {
       curr_token[i] = '\0';
       i = 0;
       quote = '\0';
-      if (t_count && curr_token[0] != '\0') {
+      if (t_count) {
         token->args[t_count++] = strdup(curr_token);
       } else {
         char *filepath = find_cmd_path(curr_token);
