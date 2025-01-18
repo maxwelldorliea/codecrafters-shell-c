@@ -64,17 +64,30 @@ token_t *tokenize(char *s) {
   char curr_token[100];
   char quote = '\0';
   token_t *token = malloc(sizeof(*token));
+  // int j = 0;
+  // while (token->args[j]) puts(token->args[j++]);
   for (int idx = 0; str[idx]; idx++) {
     if (i == 0 && (s[idx] == '"' || s[idx] == '\'')) {
       if (s[idx] == '"') quote = '"';
       else quote = '\'';
       continue;
     }
-    if (!quote && str[idx] == '\\' && str[idx + 1]) {
+    if ((!quote || quote == '"') && str[idx] == '\\' && str[idx + 1]) {
+      char next_char = str[idx + 1];
+      if (quote == '"') {
+        if (next_char == '"' || next_char == '\\'
+          || next_char == '$') {
+          idx++;
+          curr_token[i++] = str[idx];
+          continue;
+        }
+      } else {
       idx++;
       curr_token[i++] = str[idx];
       continue;
+      }
     }
+    if (quote && str[idx] == quote && str[idx + 1] != ' ') continue;
     if (i == 0 && s[idx] == ' ' && !quote) continue;
     if (str[idx] == '\n') continue;
     if (str[idx] == ' ' && !quote) {
