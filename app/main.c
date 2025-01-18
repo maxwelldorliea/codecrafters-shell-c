@@ -64,8 +64,6 @@ token_t *tokenize(char *s) {
   char curr_token[100];
   char quote = '\0';
   token_t *token = malloc(sizeof(*token));
-  // int j = 0;
-  // while (token->args[j]) puts(token->args[j++]);
   for (int idx = 0; str[idx]; idx++) {
     if (i == 0 && (s[idx] == '"' || s[idx] == '\'')) {
       if (s[idx] == '"') quote = '"';
