@@ -21,6 +21,9 @@ int main(int argc, char **args, char **env) {
   fgets(input, 100, stdin);
   input[strlen(input) - 1] = '\0';
   token_t *token = tokenize(input);
+  if (token->redirectPath != NULL) {
+      freopen(token->redirectPath, "w+", stdout);
+  }
   if (token && strcmp(token->cmd, "exit") == 0) {
       int code = 0;
       if (token->args[1]) code = atoi(token->args[1]);
@@ -44,6 +47,7 @@ int main(int argc, char **args, char **env) {
   }
   wait(NULL);
   freeToken(token);
+  freopen("/dev/tty", "w", stdout);
   }while (1);
 
   return 0;
@@ -52,8 +56,20 @@ int main(int argc, char **args, char **env) {
 void freeToken(token_t *token) {
   if (token == NULL) return;
   if (token->cmd) free(token->cmd);
+  // if (token->redirectPath != NULL) free(token->cmd);
   if (token->args[0]) for(int i = 0; token->args[i]; i++) free(token->args[i]);
   if (token) free(token);
+}
+
+int isRedirected(char *s) {
+  char *redirects[] = {">", "1>", NULL};
+  int i = 0;
+  while (redirects[i]) {
+    if (strcmp(redirects[i++], s) == 0) {
+      return 1;
+    }
+  }
+  return 0;
 }
 
 token_t *tokenize(char *s) {
@@ -63,7 +79,9 @@ token_t *tokenize(char *s) {
   int i = 0, t_count = 0;
   char curr_token[100];
   char quote = '\0';
+  int redirect = 0;
   token_t *token = malloc(sizeof(*token));
+  token->redirectPath = NULL;
   for (int idx = 0; str[idx]; idx++) {
     if (i == 0 && (s[idx] == '"' || s[idx] == '\'')) {
       if (s[idx] == '"') quote = '"';
@@ -92,7 +110,16 @@ token_t *tokenize(char *s) {
       curr_token[i] = '\0';
       i = 0;
       if (t_count) {
-        token->args[t_count++] = strdup(curr_token);
+        if (isRedirected(curr_token)) {
+          redirect = 1;
+        } else {
+          if (redirect) {
+            token->redirectPath = strdup(curr_token);
+            break;
+          } else {
+            token->args[t_count++] = strdup(curr_token);
+          }
+        }
       } else {
         char *filepath = find_cmd_path(curr_token);
         if (filepath) {
@@ -119,7 +146,16 @@ token_t *tokenize(char *s) {
       i = 0;
       quote = '\0';
       if (t_count) {
-        token->args[t_count++] = strdup(curr_token);
+        if (isRedirected(curr_token)) {
+          redirect = 1;
+        } else {
+          if (redirect) {
+            token->redirectPath = strdup(curr_token);
+            break;
+          } else {
+            token->args[t_count++] = strdup(curr_token);
+          }
+        }
       } else {
         char *filepath = find_cmd_path(curr_token);
         if (filepath) {
@@ -142,7 +178,14 @@ token_t *tokenize(char *s) {
   }
   curr_token[i] = '\0';
   if (t_count) {
-    token->args[t_count++] = strdup(curr_token);
+    if (isRedirected(curr_token)) {
+      redirect = 1;
+          puts("I found it max");
+    } else {
+      if (redirect) token->redirectPath = strdup(curr_token);
+      else
+        token->args[t_count++] = strdup(curr_token);
+    }
   } else {
     char *filepath = find_cmd_path(curr_token);
     if (filepath) {
