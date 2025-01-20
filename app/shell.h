@@ -13,6 +13,8 @@ typedef struct token_s {
 	char *args[10];
 	int isExe;
 	char *redirectPath;
+	FILE *redirectLocation;
+	char *redirectMode;
 } token_t;
 
 token_t *tokenize(char* s);
@@ -22,6 +24,6 @@ void type(token_t *token);
 void pwd(void);
 void cd(token_t *token);
 char* find_cmd_path(char *s);
-int isRedirected(char *s);
+int isRedirected(token_t *token, char *s);
 
 #endif

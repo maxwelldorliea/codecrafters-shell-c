@@ -22,7 +22,7 @@ int main(int argc, char **args, char **env) {
   input[strlen(input) - 1] = '\0';
   token_t *token = tokenize(input);
   if (token->redirectPath != NULL) {
-      freopen(token->redirectPath, "w+", stdout);
+      freopen(token->redirectPath, token->redirectMode, token->redirectLocation);
   }
   if (token && strcmp(token->cmd, "exit") == 0) {
       int code = 0;
@@ -56,18 +56,28 @@ int main(int argc, char **args, char **env) {
 void freeToken(token_t *token) {
   if (token == NULL) return;
   if (token->cmd) free(token->cmd);
-  // if (token->redirectPath != NULL) free(token->cmd);
+  if (token->redirectPath != NULL) free(token->redirectPath);
   if (token->args[0]) for(int i = 0; token->args[i]; i++) free(token->args[i]);
   if (token) free(token);
 }
 
-int isRedirected(char *s) {
-  char *redirects[] = {">", "1>", NULL};
-  int i = 0;
-  while (redirects[i]) {
-    if (strcmp(redirects[i++], s) == 0) {
-      return 1;
-    }
+int isRedirected(token_t *token, char *s) {
+  if (strcmp(s, ">") == 0 || strcmp(s, "1>") == 0) {
+    token->redirectLocation = stdout;
+    token->redirectMode = "w+";
+    return 1;
+  } else  if (strcmp(s, ">>") == 0 || strcmp(s, "1>>") == 0) {
+    token->redirectLocation = stdout;
+    token->redirectMode = "a+";
+    return 1;
+  } else if (strcmp(s, "2>") == 0) {
+    token->redirectLocation = stderr;
+    token->redirectMode = "w+";
+    return 1;
+  } else if (strcmp(s, "2>>") == 0) {
+    token->redirectLocation = stderr;
+    token->redirectMode = "a+";
+    return 1;
   }
   return 0;
 }
@@ -82,6 +92,8 @@ token_t *tokenize(char *s) {
   int redirect = 0;
   token_t *token = malloc(sizeof(*token));
   token->redirectPath = NULL;
+  token->redirectLocation = NULL;
+  token->redirectMode = NULL;
   for (int idx = 0; str[idx]; idx++) {
     if (i == 0 && (s[idx] == '"' || s[idx] == '\'')) {
       if (s[idx] == '"') quote = '"';
@@ -110,7 +122,7 @@ token_t *tokenize(char *s) {
       curr_token[i] = '\0';
       i = 0;
       if (t_count) {
-        if (isRedirected(curr_token)) {
+        if (isRedirected(token,curr_token)) {
           redirect = 1;
         } else {
           if (redirect) {
@@ -146,7 +158,7 @@ token_t *tokenize(char *s) {
       i = 0;
       quote = '\0';
       if (t_count) {
-        if (isRedirected(curr_token)) {
+        if (isRedirected(token,curr_token)) {
           redirect = 1;
         } else {
           if (redirect) {
@@ -178,7 +190,7 @@ token_t *tokenize(char *s) {
   }
   curr_token[i] = '\0';
   if (t_count) {
-    if (isRedirected(curr_token)) {
+    if (isRedirected(token,curr_token)) {
       redirect = 1;
           puts("I found it max");
     } else {
