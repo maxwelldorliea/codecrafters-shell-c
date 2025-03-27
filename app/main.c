@@ -192,7 +192,6 @@ token_t *tokenize(char *s) {
   if (t_count) {
     if (isRedirected(token,curr_token)) {
       redirect = 1;
-          puts("I found it max");
     } else {
       if (redirect) token->redirectPath = strdup(curr_token);
       else
